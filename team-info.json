@@ -1,0 +1,33 @@
+{
+    "team_name": "Team Name",
+    "students": [
+        {
+            "student_id": "k12540435",
+            "first_name": "Andres",
+            "last_name": "Figueroa Yamunaque",
+            "email": "afigueroa2409@gmail.com",
+            "github_user": "AndresFigueroa24"
+        },
+		{
+            "student_id": "k12105337",
+            "first_name": "Simon",
+            "last_name": "Mader",
+            "email": "1simon.mader1@gmail.com",
+            "github_user": "mygitusername"
+        },
+		        {
+            "student_id": "k00000000",
+            "first_name": "First",
+            "last_name": "Last",
+            "email": "first.last@mail.com",
+            "github_user": "mygitusername"
+        },
+		        {
+            "student_id": "k00000000",
+            "first_name": "First",
+            "last_name": "Last",
+            "email": "first.last@mail.com",
+            "github_user": "mygitusername"
+        },
+    ]
+}
