@@ -2,10 +2,24 @@
     "team_name": "Team Name",
     "students": [
         {
+            "first_name": "Andres",
+            "last_name": "Figueroa Yamunaque",
+            "workload": 0.25
+        },
+		{
+            "first_name": "Simon",
+            "last_name": "Mader",
+            "workload": 0.25
+        },
+		{
             "first_name": "First",
             "last_name": "Last",
             "workload": 0.25
         },
-        // ...add a record for each student
+		{
+            "first_name": "First",
+            "last_name": "Last",
+            "workload": 0.25
+        },
     ]
 } 
