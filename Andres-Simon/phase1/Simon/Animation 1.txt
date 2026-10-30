@@ -1,0 +1,4 @@
+Animation 1:
+Ich möchte dass die beim Balkendiagramm der letzte Balken blind Spot weggeht da er sich nicht mit confidence oder IoU verändert. Zudem soll der grüne Balken TP (Conf, IoU>T) heißen, Pure BG FP soll FP (Haluzination) heißen, Error (IoU<T) soll Missed (IoU<T) heißen und die andern beiden können so bleiben.
+Bei der Bubble Color sollte mannicht mehr auswählen können sondern es soll standardmäßig der F1-Score sein und die traveleled trajectory soll in Grau gestrichelt und nicht in blau solid dargestellt sein. Das brauche ich nicht mehr: 
+Show live [TP|FP|FN] counts on every bubble label
