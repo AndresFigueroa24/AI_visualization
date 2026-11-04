@@ -2,7 +2,7 @@
 
 **Course:** AI and Visualization Lab (WS26) – Visual Data Science Lab, Johannes Kepler University Linz (JKU)  
 **Repository:** [https\://github.com/AndresFigueroa24/AI\_visualization](https://github.com/AndresFigueroa24/AI_visualization)  
-**Authors:** Andrés Figueroa, Simon Mader, Enkhdalai Munkhdorj and Karin  
+**Authors:** Andrés Figueroa, Simon Mader, Enkhdalai Munkhdorj and Karin Wagner 
 **Inspected Architecture:** `YOLO26n` (Black-Box Object Detector)  
 **Target Benchmark:** Pascal VOC (`VOC2007` & `VOC2012`)
 
