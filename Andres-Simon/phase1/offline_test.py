@@ -12,7 +12,7 @@ VOC_CLASSES = [
     "pottedplant", "sheep", "sofa", "train", "tvmonitor"
 ]
 
-# Mapping to reconcile label naming differences (e.g. COCO vs Pascal VOC)
+# Mapping to standardize naming differences (e.g. COCO vs Pascal VOC)
 VOC_NAME_MAP = {
     "potted plant": "pottedplant",
     "dining table": "diningtable",
@@ -107,7 +107,6 @@ def main():
     model = YOLO(str(model_weight))
 
     records = []
-    max_images_per_split = 250  # Adjust as needed
 
     for split in dataset_splits:
         ann_dir = split / "Annotations"
@@ -118,8 +117,10 @@ def main():
             continue
 
         split_name = split.name
-        xml_files = sorted(list(ann_dir.glob("*.xml")))[:max_images_per_split]
-        print(f"Evaluating {len(xml_files)} samples from {split_name}...")
+        # Process ALL XML files in the folder (no limit)
+        xml_files = sorted(list(ann_dir.glob("*.xml")))
+        total_xmls = len(xml_files)
+        print(f"Evaluating entire split {split_name} ({total_xmls} total images)...")
 
         for idx, xml_path in enumerate(xml_files):
             sample_id = f"{split_name}_{xml_path.stem}"
@@ -130,6 +131,7 @@ def main():
             gt_objects, img_w, img_h = parse_voc_xml(xml_path)
             total_area = float(img_w * img_h)
 
+            # Black-box batch prediction
             results = model.predict(str(img_path), conf=0.25, iou=0.45, verbose=False)
             res = results[0]
 
@@ -194,7 +196,7 @@ def main():
                         "Environmental_Condition": condition
                     })
 
-            # Collect unmatched detections as False Positives
+            # Collect unmatched predictions as False Positives
             for pb in pred_boxes:
                 if not pb["matched"] and pb["class"] in VOC_CLASSES:
                     p_area = (pb["bbox"][2] - pb["bbox"][0]) * (pb["bbox"][3] - pb["bbox"][1])
@@ -210,12 +212,16 @@ def main():
                         "Environmental_Condition": condition
                     })
 
+            # Progress feedback every 500 images
+            if (idx + 1) % 500 == 0:
+                print(f"[{split_name}] Processed {idx + 1}/{total_xmls} images...")
+
     out_file = base_dir / "voc_behavioral_results.csv"
     out_file.parent.mkdir(parents=True, exist_ok=True)
 
     df = pd.DataFrame(records)
     df.to_csv(str(out_file), index=False, encoding="utf-8")
-    print(f"\nDone! Processed {len(df)} records. Saved to: {out_file}")
+    print(f"\nDone! Processed {len(df)} total detection records across the entire dataset. Saved to: {out_file}")
 
 if __name__ == "__main__":
     main()
