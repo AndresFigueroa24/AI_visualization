@@ -1,0 +1,13 @@
+Thank you Andres. My name is Simon, and I will present the results of the AI-aided pair.
+
+First, we clustered the 20 classes into 3 categories using t-SNE based on an embedding done with this YOLO bounding-box feature vector. To validate this clustering, we evaluated the misclassification matrix: diagonal entries represent in-cluster errors, while off-diagonals represent cross-cluster errors. With 88% of misclassifications lying on the diagonal, the clustering hypothesis is clearly confirmed.
+
+In this next visualization, points are colored by confidence—from high (yellow) to low (purple). To see which features drive confidence, all quantities were normalized to 1. The high-confidence region (green) clearly shows higher IoU, larger object size, smaller aspect ratio, and fewer total objects per image compared to the low-confidence region (red).
+
+Here, we see how the confidence threshold (left) and the IoU threshold (right) impact classification across the 20 class trajectories. As the confidence threshold decreases, classes move toward perfect classification, whereas the IoU threshold has noticeably less impact.
+
+Finally, this diagnostic quadrant shows Precision versus Recall across an increasing confidence threshold. Point size reflects class instance count, and color indicates the F1-score.
+
+The second animation illustrates the exact same trajectory sweep for an increasing IoU threshold.
+
+That’s it from my side. Thank you, and I will now hand over to the AI-free pair.
