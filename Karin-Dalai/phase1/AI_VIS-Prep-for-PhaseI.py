@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from xml.etree import ElementTree as ET
 from ultralytics import YOLO
+from pathlib import Path
+import seaborn as sns
+from pathlib import Path
 
 SEED = 42
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -58,9 +61,13 @@ def load_model():
 model, VOC_TO_COCO_IDX = load_model()
 print(f"YOLO26n geladen, {len(VOC_TO_COCO_IDX)} VOC-Klassen gemappt.")
 
-IMG_DIR = "VOC2007/JPEGImages"
-ANN_DIR = "VOC2007/Annotations"
-IMAGE_LIST = "VOC2007/ImageSets/Main/test.txt"
+
+BASE_DIR = Path(__file__).resolve().parent
+DATASET_DIR = BASE_DIR / "VOC2007"
+
+IMG_DIR = str(DATASET_DIR / "JPEGImages")
+ANN_DIR = str(DATASET_DIR / "Annotations")
+IMAGE_LIST = str(DATASET_DIR / "ImageSets/Main/test.txt")
 
 def load_voc_annotations(ann_dir):
     """Liest alle VOC-XML-Annotationen in einen DataFrame:
@@ -114,7 +121,93 @@ print(gt.groupby("size_bucket")["cls"].count())
 print(gt.head())
 
 
-def run_inference(img_path, conf_thres=0.25):
+CLASS_TYPES = {
+    "Human": ["person"],
+    "Animal": [
+        "bird", "cat", "cow", "dog",
+        "horse", "sheep"
+    ],
+    "Vehicle": [
+        "aeroplane", "bicycle", "boat",
+        "bus", "car", "motorbike", "train"
+    ],
+    "Object": [
+        "bottle", "chair", "diningtable",
+        "pottedplant", "sofa", "tvmonitor"
+    ]
+}
+
+CLASS_TO_TYPE = {
+    cls: group
+    for group, classes in CLASS_TYPES.items()
+    for cls in classes
+}
+
+gt["class_type"] = gt["cls"].map(CLASS_TO_TYPE)
+
+# Normalized center coordinates: 0 to 1
+gt["center_x"] = (
+    (gt["xmin"] + gt["xmax"]) / 2 / gt["img_w"]
+)
+gt["center_y"] = (
+    (gt["ymin"] + gt["ymax"]) / 2 / gt["img_h"]
+)
+
+# 0 = image center, 1 = image corner
+gt["centricity"] = np.sqrt(
+    (gt["center_x"] - 0.5)**2 +
+    (gt["center_y"] - 0.5)**2
+) / np.sqrt(0.5)
+
+# Ground-truth bounding-box overlap
+gt["max_gt_iou"] = 0.0
+gt["overlap_ratio"] = 0.0
+gt["overlapped"] = False
+
+for image_id, group in gt.groupby("image"):
+    indices = group.index.to_list()
+
+    for i in indices:
+        a = gt.loc[i, ["xmin", "ymin", "xmax", "ymax"]].to_numpy(dtype=float)
+        area_a = max(0, a[2]-a[0]) * max(0, a[3]-a[1])
+
+        max_iou = 0.0
+        max_overlap_ratio = 0.0
+
+        for j in indices:
+            if i == j:
+                continue
+
+            b = gt.loc[j, ["xmin", "ymin", "xmax", "ymax"]].to_numpy(dtype=float)
+
+            x1 = max(a[0], b[0])
+            y1 = max(a[1], b[1])
+            x2 = min(a[2], b[2])
+            y2 = min(a[3], b[3])
+
+            intersection = max(0, x2-x1) * max(0, y2-y1)
+            area_b = max(0, b[2]-b[0]) * max(0, b[3]-b[1])
+            union = area_a + area_b - intersection
+
+            box_iou = intersection / union if union > 0 else 0
+            overlap_ratio = intersection / area_a if area_a > 0 else 0
+
+            max_iou = max(max_iou, box_iou)
+            max_overlap_ratio = max(max_overlap_ratio, overlap_ratio)
+
+        gt.loc[i, "max_gt_iou"] = max_iou
+        gt.loc[i, "overlap_ratio"] = max_overlap_ratio
+        gt.loc[i, "overlapped"] = max_overlap_ratio > 0
+
+print(gt[[
+    "cls", "class_type", "rel_area",
+    "centricity", "max_gt_iou",
+    "overlap_ratio", "overlapped"
+]].head())
+
+def run_inference(img_path, conf_thres=0.01):
+    # Lower inference threshold to retain low-confidence candidate boxes.
+    # This changes the evaluation population; rerun preprocessing before plotting.
 
     coco_to_voc = {coco_idx: voc_name for voc_name, coco_idx in VOC_TO_COCO_IDX.items()}
     results = model(img_path, conf=conf_thres, verbose=False)
@@ -145,30 +238,115 @@ def iou(a, b):
     union = (a[2]-a[0])*(a[3]-a[1]) + (b[2]-b[0])*(b[3]-b[1]) - inter
     return inter / union if union > 0 else 0.0
 
+
 def match_detections(gt_rows, det_df, iou_thres=0.5):
-    """Ordnet jede Detection einer GT-Box zu (greedy nach Confidence):
-    correct | wrong_class | missed."""
-    out = []
-    dets = det_df.sort_values("conf", ascending=False).to_dict("records")
-    taken = set()
-    for _, g in gt_rows.iterrows():
-        gt_box = [g.xmin, g.ymin, g.xmax, g.ymax]
-        best, best_iou = None, 0.0
-        for i, d in enumerate(dets):
-            if i in taken:
+    gt_list = gt_rows.to_dict("records")
+    det_list = det_df.to_dict("records")
+
+    matches = {}
+    used_gt = set()
+    used_det = set()
+
+    candidates = []
+
+    for gi, g in enumerate(gt_list):
+        gb = [g[k] for k in ["xmin", "ymin", "xmax", "ymax"]]
+
+        for di, d in enumerate(det_list):
+            db = [d[k] for k in ["xmin", "ymin", "xmax", "ymax"]]
+            ov = iou(gb, db)
+
+            if ov >= iou_thres:
+                candidates.append((
+                    gi, di, ov,
+                    g["cls"] == d["det_cls"],
+                    d["conf"]
+                ))
+
+    # Stage 1: correct class
+    # Stage 2: wrong class
+    for require_correct in [True, False]:
+        eligible = [
+            c for c in candidates
+            if c[3] == require_correct
+        ]
+
+        eligible.sort(
+            key=lambda c: (c[2], c[4]),
+            reverse=True
+        )
+
+        for gi, di, ov, same_class, conf in eligible:
+            if gi in used_gt or di in used_det:
                 continue
-            ov = iou(gt_box, [d["xmin"], d["ymin"], d["xmax"], d["ymax"]])
-            if ov > best_iou:
-                best, best_iou = i, ov
-        if best is not None and best_iou >= iou_thres:
-            d = dets[best]; taken.add(best)
-            status = "correct" if d["det_cls"] == g.cls else "wrong_class"
-            out.append({**g.to_dict(), "status": status,
-                        "det_cls": d["det_cls"], "conf": d["conf"], "det_iou": best_iou})
+
+            matches[gi] = (di, ov)
+            used_gt.add(gi)
+            used_det.add(di)
+
+    out = []
+
+    for gi, g in enumerate(gt_list):
+        gb = [g[k] for k in ["xmin", "ymin", "xmax", "ymax"]]
+        # Highest-overlap candidate irrespective of class or one-to-one matching.
+        # This is diagnostic only, NOT the matched prediction.
+        candidate_pairs = [
+            (iou(gb, [d[k] for k in ["xmin", "ymin", "xmax", "ymax"]]), di)
+            for di, d in enumerate(det_list)
+        ]
+        best_ov, best_di = max(candidate_pairs, default=(np.nan, None))
+        candidate_info = {
+            "candidate_iou": best_ov,
+            "candidate_conf": det_list[best_di]["conf"] if best_di is not None else np.nan,
+            "candidate_cls": det_list[best_di]["det_cls"] if best_di is not None else None,
+            "has_candidate": best_di is not None,
+        }
+        if gi in matches:
+            di, ov = matches[gi]
+            d = det_list[di]
+
+            status = (
+                "correct"
+                if g["cls"] == d["det_cls"]
+                else "wrong_class"
+            )
+
+            out.append({
+                **g,
+                "status": status,
+                "det_cls": d["det_cls"],
+                "conf": d["conf"],
+                "det_iou": ov,
+                **candidate_info
+            })
+
         else:
-            out.append({**g.to_dict(), "status": "missed",
-                        "det_cls": None, "conf": np.nan, "det_iou": best_iou})
+            gb = [g[k] for k in ["xmin", "ymin", "xmax", "ymax"]]
+
+            best_iou = max(
+                (
+                    iou(
+                        gb,
+                        [d[k] for k in
+                         ["xmin", "ymin", "xmax", "ymax"]]
+                    )
+                    for d in det_list
+                ),
+                default=0.0
+            )
+
+            out.append({
+                **g,
+                "status": "missed",
+                "det_cls": None,
+                "conf": np.nan,
+                "det_iou": np.nan,
+                "best_any_iou": best_iou,
+                **candidate_info
+            })
+
     return pd.DataFrame(out)
+
 
 #  Phase I über den Test-Loop laufen lassen --------------------------
 image_ids = [line.strip() for line in open(IMAGE_LIST)]
@@ -184,44 +362,18 @@ for img_id in image_ids[:MAX_IMAGES]:
     matched["image_path"] = img_path
     phase1_records.append(matched)
 
+BASE_DIR = Path(__file__).resolve().parent
+
 phase1 = pd.concat(phase1_records, ignore_index=True)
+
 phase1["status"] = pd.Categorical(
-    phase1["status"], categories=["correct", "wrong_class", "missed"], ordered=True)
-phase1.to_csv("phase1_results.csv", index=False)
+    phase1["status"],
+    categories=["correct", "wrong_class", "missed"],
+    ordered=True
+)
+
+# Save CSV
+phase1.to_csv(BASE_DIR / "phase1_results.csv", index=False)
+
 print(phase1.groupby("status", observed=True).size())
-
-# --- Visualisierungen (H1–H3) ----------------------------------
-# H1: Erkennungsrate & Confidence nach Objektgröße
-fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-rate = phase1.assign(ok=phase1.status == "correct").groupby("size_bucket")["ok"].mean()
-rate.reindex(["small", "medium", "large"]).plot.bar(ax=axes[0], color="#4C72B0")
-axes[0].set_title("H1: Detection rate vs. object size")
-axes[0].set_ylabel("correct-detection rate")
-
-for bucket in ["small", "medium", "large"]:
-    sub = phase1[(phase1.size_bucket == bucket) & phase1.conf.notna()]
-    axes[1].hist(sub.conf, bins=20, alpha=0.5, label=bucket)
-axes[1].set_title("H1: Confidence distribution per size")
-axes[1].set_xlabel("confidence"); axes[1].legend()
-plt.tight_layout(); plt.savefig("fig_h1_size.png", dpi=150); plt.show()
-
-# H2: Performance vs. Bildkomplexität
-fig, ax = plt.subplots(figsize=(6, 4))
-comp = phase1.assign(ok=phase1.status == "correct").groupby("n_objects")["ok"].agg(["mean", "count"])
-comp = comp[comp["count"] >= 10]  # seltenere Gruppen glätten
-comp["mean"].plot(ax=ax, marker="o")
-ax.set_title("H2: Detection rate vs. #objects per image")
-ax.set_xlabel("objects per image"); ax.set_ylabel("correct-detection rate")
-plt.tight_layout(); plt.savefig("fig_h2_complexity.png", dpi=150); plt.show()
-
-# H3: Fehler nach Klasse (Confusion-Paare + Error-Rate pro Klasse)
-conf_pairs = (phase1[phase1.status == "wrong_class"]
-              .groupby(["cls", "det_cls"]).size().sort_values(ascending=False))
-print("Top-10 class confusions:\n", conf_pairs.head(10))
-
-err = phase1.assign(err=phase1.status != "correct").groupby("cls")["err"].mean().sort_values()
-fig, ax = plt.subplots(figsize=(8, 6))
-err.plot.barh(ax=ax, color="#C44E52")
-ax.set_title("H3: Error rate per class")
-plt.tight_layout(); plt.savefig("fig_h3_classes.png", dpi=150); plt.show()
 
