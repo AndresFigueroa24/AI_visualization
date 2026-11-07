@@ -206,8 +206,6 @@ print(gt[[
 ]].head())
 
 def run_inference(img_path, conf_thres=0.01):
-    # Lower inference threshold to retain low-confidence candidate boxes.
-    # This changes the evaluation population; rerun preprocessing before plotting.
 
     coco_to_voc = {coco_idx: voc_name for voc_name, coco_idx in VOC_TO_COCO_IDX.items()}
     results = model(img_path, conf=conf_thres, verbose=False)
@@ -229,7 +227,7 @@ def run_inference(img_path, conf_thres=0.01):
         columns=["det_cls", "conf", "xmin", "ymin", "xmax", "ymax"]
     ), r
 
-# --- Matching (Prediction <-> Ground Truth) ----------------------------
+# Matching (Prediction <-> Ground Truth)
 def iou(a, b):
     """IoU zweier Boxen [xmin, ymin, xmax, ymax]."""
     x1, y1 = max(a[0], b[0]), max(a[1], b[1])
@@ -263,8 +261,7 @@ def match_detections(gt_rows, det_df, iou_thres=0.5):
                     d["conf"]
                 ))
 
-    # Stage 1: correct class
-    # Stage 2: wrong class
+
     for require_correct in [True, False]:
         eligible = [
             c for c in candidates
@@ -288,8 +285,7 @@ def match_detections(gt_rows, det_df, iou_thres=0.5):
 
     for gi, g in enumerate(gt_list):
         gb = [g[k] for k in ["xmin", "ymin", "xmax", "ymax"]]
-        # Highest-overlap candidate irrespective of class or one-to-one matching.
-        # This is diagnostic only, NOT the matched prediction.
+
         candidate_pairs = [
             (iou(gb, [d[k] for k in ["xmin", "ymin", "xmax", "ymax"]]), di)
             for di, d in enumerate(det_list)
