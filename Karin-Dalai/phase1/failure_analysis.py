@@ -251,7 +251,10 @@ post_script = r"""
   tip.style.cssText = 'position:fixed;display:none;z-index:9999;pointer-events:none;max-width:290px;background:white;border:1px solid #d7dde5;border-radius:10px;padding:10px;box-shadow:0 5px 24px rgba(0,0,0,.22);font:13px Arial,sans-serif;color:#222;';
   const img = document.createElement('img');
   img.style.cssText = 'max-width:260px;max-height:210px;width:auto;height:auto;display:block;border-radius:5px;margin-bottom:7px;';
+  const details = document.createElement('div');
+  details.style.cssText = 'font:12px/1.5 Arial,sans-serif;white-space:pre-line;';
   tip.appendChild(img);
+  tip.appendChild(details);
   document.body.appendChild(tip);
   function move(event) {
     if (!event) return;
@@ -266,6 +269,7 @@ post_script = r"""
     const src = previews[String(d[6])];
     if (!src) { tip.style.display = 'none'; return; }
     img.src = src;
+    details.textContent = 'Image: ' + d[0] + '\nGround truth: ' + d[1] + '\nPredicted: ' + d[2] + '\nSize: ' + d[3] + ' (' + d[4] + '% of image)' + '\nConfidence: ' + d[5] + (d.length > 7 ? '\nIoU: ' + d[7] + '\nMetric source: ' + d[8] : '');
     tip.style.display = 'block';
     move(ev.event);
   });
@@ -278,7 +282,7 @@ fig.write_html(
     str(OUT / "5_scatter_size_confidence.html"),
     include_plotlyjs=True, full_html=True, post_script=post_script,
 )
-print("Saved:", OUT / "4_scatter_size_confidence.html")
+print("Saved:", OUT / "5_scatter_size_confidence.html")
 
 
 # Interactive  position scatter.
@@ -330,7 +334,7 @@ fig8.update_xaxes(title="Intersection over Union (IoU)", range=[-0.11, 1.02],
 fig8.update_yaxes(title="Prediction confidence", range=[-0.11, 1.02],
                   tickvals=axis_ticks, ticktext=axis_labels)
 
-html_path = OUT / "5_iuo_scatter_plot.html"
+html_path = OUT / "6_iuo_scatter_plot.html"
 fig8.write_html(str(html_path), include_plotlyjs=True, full_html=True,
                 post_script=post_script)
 print("Saved:", html_path)
