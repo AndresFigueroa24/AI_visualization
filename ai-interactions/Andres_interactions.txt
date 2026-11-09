@@ -1,0 +1,9 @@
+Create a Streamlit UI using the PASCAL test dataset and the Yolo26n model. I want to test the model's inputs and outputs, and adjust image parameters like brightness, contrast, and noise.
+
+Add a tab in the UI to display the confusion matrix of the test dataset and define semantic groups.
+
+Evaluate the dimensions of the inputs relative to the image size to determine confidence values.
+
+Allow me to interactively change the confidence and IoU threshold values for the model's detections.
+
+Provide a table of failure cases with the exact image names so I can isolate them.
