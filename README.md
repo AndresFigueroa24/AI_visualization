@@ -44,14 +44,14 @@ AI_visualization/
 │   └── Phase 1/
 │       ├── AI_VIS-Prep-for-PhaseI.py       # Step 1 – YOLO26n inference on VOC2007 test (first 500 images) → CSV
 │       ├── phase1_results.csv              # Precomputed per-object results (1,473 rows)
-│       ├── umap_visualization.py           # Step 2 – ResNet-18 image embeddings + UMAP projections → figures/
+│       ├── umap_visualization.py           # Step 2 – image embeddings + UMAP projections → figures/
 │       └── failure_analysis.py             # Step 3 – Miss rates, confusion matrices & interactive scatter plots → figures/
 │
 ├── ai-interactions/                        # Logged prompts & LLM interactions
 │   ├── Andres_interactions.txt
 │   └── Simon_interactions.ipynb
 │
-├── Phase_1_Presentation/                   # Phase I presentation materials (placeholder)
+├── Phase_1_Presentation/                   # Phase I presentation materials
 │
 └── Trash/                                  # Archived drafts, superseded scripts & recordings (not part of the submission)
 ```
@@ -76,7 +76,7 @@ NON-AI Pair/Phase 1/
 │   ├── Annotations/                        # Pascal VOC XML ground-truth labels
 │   ├── ImageSets/Main/test.txt             # VOC2007 test split image list
 │   └── JPEGImages/                         # VOC2007 images (.jpg)
-└── figures/                                # Generated automatically by Steps 2 & 3
+└── figures/                                # Generated figures
 ```
 
 ---
