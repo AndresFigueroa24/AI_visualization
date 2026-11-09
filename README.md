@@ -26,23 +26,57 @@ In accordance with the assignment guidelines:
 
 ```
 AI_visualization/
-├── .gitignore
-├── team-info.json                 # Mandatory course team registration
-├── workload.json                  # Student contribution distribution
-├── README.md                      # Primary project documentation
-└── phase1/
-    ├── offline_test.py            # Batch evaluation, IoU matching & CSV exporter
-    ├── visualization.py           # Streamlit interactive diagnostic dashboard
-    ├── voc_behavioral_results.csv # Precomputed diagnostic benchmark results
-    ├── yolo26n.pt                 # Model checkpoint weights (or yolov8n.pt fallback)
-    └── VOC_dataset/
-        └── VOCdevkit/
-            ├── VOC2007/
-            │   ├── Annotations/   # Pascal VOC XML ground-truth labels
-            │   └── JPEGImages/    # VOC2007 test and train images (.jpg)
-            └── VOC2012/
-                ├── Annotations/   # Pascal VOC XML ground-truth labels
-                └── JPEGImages/    # VOC2012 test and train images (.jpg)
+├── .gitignore                              # Ignores archive/ (local dataset copy)
+├── README.md                               # Primary project documentation
+├── team-info.json                          # Mandatory course team registration
+├── workload.json                           # Student contribution distribution
+├── ai_reflection_midpoint.md               # Midpoint reflections on AI use (AI-aided pair)
+│
+├── AI-Aided Pair/                          # Andrés Figueroa & Simon Mader
+│   └── Phase 1/
+│       ├── offline_test.py                 # Batch YOLO26n inference on VOC2007 + VOC2012, IoU matching & CSV exporter
+│       ├── voc_behavioral_results.csv      # Precomputed per-object behavioral results (1,641 rows)
+│       ├── visualization.py                # Streamlit interactive diagnostic dashboard
+│       ├── data_analysis_tSNE.ipynb        # t-SNE behavioral manifold & cluster validation
+│       └── dynamics_towards_full_TP.ipynb  # Confidence/IoU threshold-sweep trajectories (PCA, 2D & 3D)
+│
+├── NON-AI Pair/                            # Enkhdalai Munkhdorj & Karin Wagner
+│   └── Phase 1/
+│       ├── AI_VIS-Prep-for-PhaseI.py       # Step 1 – YOLO26n inference on VOC2007 test (first 500 images) → CSV
+│       ├── phase1_results.csv              # Precomputed per-object results (1,473 rows)
+│       ├── umap_visualization.py           # Step 2 – ResNet-18 image embeddings + UMAP projections → figures/
+│       └── failure_analysis.py             # Step 3 – Miss rates, confusion matrices & interactive scatter plots → figures/
+│
+├── ai-interactions/                        # Logged prompts & LLM interactions
+│   ├── Andres_interactions.txt
+│   └── Simon_interactions.ipynb
+│
+├── Phase_1_Presentation/                   # Phase I presentation materials (placeholder)
+│
+└── Trash/                                  # Archived drafts, superseded scripts & recordings (not part of the submission)
+```
+
+### Local Files (not tracked – add before running)
+
+```
+AI-Aided Pair/Phase 1/
+├── yolo26n.pt                              # Model checkpoint weights
+└── VOC_dataset/                            # Alternatively: archive/VOC_dataset/
+    └── VOCdevkit/
+        ├── VOC2007/
+        │   ├── Annotations/                # Pascal VOC XML ground-truth labels
+        │   └── JPEGImages/                 # VOC2007 images (.jpg)
+        └── VOC2012/
+            ├── Annotations/                # Pascal VOC XML ground-truth labels
+            └── JPEGImages/                 # VOC2012 images (.jpg)
+
+NON-AI Pair/Phase 1/
+├── yolo26n.pt                              # Loaded from the working directory – run scripts from this folder
+├── VOC2007/
+│   ├── Annotations/                        # Pascal VOC XML ground-truth labels
+│   ├── ImageSets/Main/test.txt             # VOC2007 test split image list
+│   └── JPEGImages/                         # VOC2007 images (.jpg)
+└── figures/                                # Generated automatically by Steps 2 & 3
 ```
 
 ---
