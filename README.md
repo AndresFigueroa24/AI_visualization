@@ -103,11 +103,11 @@ Invoke-WebRequest -Uri "https://github.com/ultralytics/assets/releases/download/
             "github_user": "enkhdalaimunkh-dotcom"
         },
 		        {
-            "student_id": "k00000000",
+            "student_id": "k09825340",
             "first_name": "Karin",
             "last_name": "Wagner",
-            "email": "first.last@mail.com",
-            "github_user": "mygitusername"
+            "email": "karin.wagner.mail@gmx.at",
+            "github_user": "Grasshopper-K"
         },
     ]
 }
